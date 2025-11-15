@@ -1,0 +1,29 @@
+{
+    "symptom_mapping": {
+        "fever": 0,
+        "headache": 1,
+        "cough": 2,
+        "fatigue": 3,
+        "nausea": 4,
+        "chest_pain": 5,
+        "shortness_breath": 6,
+        "sore_throat": 7,
+        "runny_nose": 8,
+        "muscle_pain": 9,
+        "chills": 10,
+        "loss_of_taste": 11,
+        "loss_of_smell": 12
+    },
+    "condition_mapping": {
+        "0": "Common Cold",
+        "1": "Influenza",
+        "2": "COVID-19",
+        "3": "Pneumonia",
+        "4": "Bronchitis",
+        "5": "Strep Throat",
+        "6": "Migraine",
+        "7": "Allergies",
+        "8": "Asthma",
+        "9": "Gastroenteritis"
+    }
+}
