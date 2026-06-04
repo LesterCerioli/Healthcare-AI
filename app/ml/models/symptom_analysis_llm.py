@@ -1,16 +1,3 @@
-"""
-Enhanced general symptom analysis LLM.
-
-Provides a broad first-pass symptom triage across 15 disease categories
-and routes to specialized LLMs (DiabetesLLM, CardiovascularLLM) when the
-primary suspicion warrants a deeper specialist workup.
-
-Input features (40 total):
-  General symptoms [0–24]: 25 common symptoms across organ systems
-  Patient context [25–39]: 15 demographic and risk-factor features
-
-All values normalized to [0.0, 1.0].
-"""
 
 from typing import Dict, Any, List, Optional
 from .llm_base import BaseMedicalLLM

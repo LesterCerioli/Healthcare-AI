@@ -1,9 +1,3 @@
-"""
-Model registry for managing all medical AI model instances and versions.
-
-Supports both the legacy MLP-based models and the new LLM-based
-specialized models (DiabetesLLM, CardiovascularLLM, SymptomAnalysisLLM).
-"""
 
 import os
 from typing import Dict, Any, Optional

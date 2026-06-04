@@ -1,9 +1,3 @@
-"""
-Base LLM architecture for specialized medical diagnostic models.
-
-Uses transformer-style attention to capture correlations between clinical
-features (symptoms, lab markers, patient context) that simple MLPs miss.
-"""
 
 from abc import abstractmethod
 from typing import Dict, Any, List, Optional
