@@ -93,6 +93,22 @@ class MedicalDiagnosticModel(nn.Module, BaseMedicalModel):
         }
         return recommendations.get(diagnosis, ["Consult a healthcare professional for proper diagnosis"])
     
+    def get_model_info(self) -> Dict[str, Any]:
+        """Return model metadata and version information"""
+        total_params = sum(p.numel() for p in self.parameters())
+        return {
+            "model_class": self.__class__.__name__,
+            "input_size": self.input_size,
+            "hidden_size": self.hidden_size,
+            "num_classes": self.num_classes,
+            "total_parameters": total_params,
+            "supported_symptoms": list(self.symptom_mapping.keys()),
+            "supported_conditions": list(self.condition_mapping.values()),
+            "architecture": "MLP (3-layer fully connected)",
+            "framework": "PyTorch",
+            "version": "1.0.0",
+        }
+
     def predict(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         self.eval()
         with torch.no_grad():

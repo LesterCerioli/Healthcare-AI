@@ -9,6 +9,7 @@ import json
 import os
 from datetime import datetime
 from app.ml.models.diagnostic_model import MedicalDiagnosticModel
+from app.ml.models.model_registry import ModelRegistry
 from app.ml.data.preprocessor import MedicalDataPreprocessor
 
 class MedicalModelTrainer:
