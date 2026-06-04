@@ -15,7 +15,7 @@ email-validator>=2.0.0
 pydantic-settings==2.1.0
 pytest==9.0.3
 pytest-asyncio==0.21.1
-python-multipart==0.0.6
+python-multipart==0.0.27
 sendgrid==6.9.7
 python-http-client==3.3.7
 torch>=2.8.0
