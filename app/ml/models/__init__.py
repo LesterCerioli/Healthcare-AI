@@ -4,6 +4,10 @@ Medical AI Models Package
 Contains all machine learning models for medical diagnosis, including:
   - Legacy MLP-based models (BaseMedicalModel, MedicalDiagnosticModel, UltraLightMedicalModel)
   - Attention-based specialized LLMs (DiabetesLLM, CardiovascularLLM, SymptomAnalysisLLM)
+  - TensorFlow specialized diabetes LLMs:
+      DiabetesType1LLM  — autoimmune T1DM + DKA + LADA (30 features, 6 classes)
+      DiabetesType2LLM  — insulin-resistance T2DM + pre-diabetes (34 features, 6 classes)
+      DiabetesGestationalLLM — DMG/GDM in pregnancy (28 features, 5 classes)
 
 Follows SOLID principles and uses the factory pattern for model management.
 """
@@ -14,7 +18,7 @@ from .diagnostic_model import MedicalDiagnosticModel
 from .ultra_light_model import UltraLightMedicalModel, create_ultra_light_model
 from .model_registry import ModelRegistry
 
-# Specialized LLMs
+# PyTorch specialized LLMs
 from .diabetes_llm import DiabetesLLM, DiabetesFeatureNormalizer, create_diabetes_llm
 from .cardiovascular_llm import (
     CardiovascularLLM,
@@ -23,8 +27,26 @@ from .cardiovascular_llm import (
 )
 from .symptom_analysis_llm import SymptomAnalysisLLM, create_symptom_analysis_llm
 
+# TensorFlow diabetes-specialized LLMs
+from .tf_diabetes_base import BaseDiabetesTFModel
+from .diabetes_type1_llm_tf import (
+    DiabetesType1LLM,
+    DiabetesType1FeatureNormalizer,
+    create_diabetes_type1_llm,
+)
+from .diabetes_type2_llm_tf import (
+    DiabetesType2LLM,
+    DiabetesType2FeatureNormalizer,
+    create_diabetes_type2_llm,
+)
+from .diabetes_gestational_llm_tf import (
+    DiabetesGestationalLLM,
+    DiabetesGestationalFeatureNormalizer,
+    create_diabetes_gestational_llm,
+)
 
-__version__ = "2.0.0"
+
+__version__ = "2.1.0"
 __author__ = "Medical AI Team"
 __description__ = (
     "Medical diagnostic AI models: MLP-based classifiers and "
@@ -35,11 +57,12 @@ __all__ = [
     # Base classes
     "BaseMedicalModel",
     "BaseMedicalLLM",
+    "BaseDiabetesTFModel",
     # Legacy MLP models
     "MedicalDiagnosticModel",
     "UltraLightMedicalModel",
     "create_ultra_light_model",
-    # Specialized LLMs
+    # PyTorch specialized LLMs
     "DiabetesLLM",
     "DiabetesFeatureNormalizer",
     "create_diabetes_llm",
@@ -48,6 +71,16 @@ __all__ = [
     "create_cardiovascular_llm",
     "SymptomAnalysisLLM",
     "create_symptom_analysis_llm",
+    # TensorFlow diabetes LLMs
+    "DiabetesType1LLM",
+    "DiabetesType1FeatureNormalizer",
+    "create_diabetes_type1_llm",
+    "DiabetesType2LLM",
+    "DiabetesType2FeatureNormalizer",
+    "create_diabetes_type2_llm",
+    "DiabetesGestationalLLM",
+    "DiabetesGestationalFeatureNormalizer",
+    "create_diabetes_gestational_llm",
     # Registry and factory helpers
     "ModelRegistry",
     "MODEL_FACTORY",
@@ -59,7 +92,10 @@ __all__ = [
 ]
 
 
-_LLM_TYPES = {"diabetes", "cardiovascular", "symptom_analysis"}
+_LLM_TYPES = {
+    "diabetes", "cardiovascular", "symptom_analysis",
+    "diabetes_type1_tf", "diabetes_type2_tf", "diabetes_gestational_tf",
+}
 
 MODEL_FACTORY = {
     "diagnostic": MedicalDiagnosticModel,
@@ -67,6 +103,10 @@ MODEL_FACTORY = {
     "diabetes": DiabetesLLM,
     "cardiovascular": CardiovascularLLM,
     "symptom_analysis": SymptomAnalysisLLM,
+    # TensorFlow diabetes models
+    "diabetes_type1_tf": DiabetesType1LLM,
+    "diabetes_type2_tf": DiabetesType2LLM,
+    "diabetes_gestational_tf": DiabetesGestationalLLM,
     "default": MedicalDiagnosticModel,
 }
 
@@ -154,6 +194,40 @@ def get_available_models() -> dict:
             "resource_requirements": "Low-Medium (<200MB RAM)",
             "architecture": "Clinical Transformer (multi-head self-attention)",
         },
+        # TensorFlow diabetes models
+        "diabetes_type1_tf": {
+            "class": DiabetesType1LLM,
+            "description": (
+                "TF Feature-Token Transformer for T1DM: "
+                "Stage 1–3, DKA (Critical urgency), LADA. "
+                "30 features: autoantibodies (GAD65/IA-2/ZnT8), C-peptide, ketones."
+            ),
+            "recommended_use": "Autoimmune diabetes diagnosis, DKA screening, LADA identification",
+            "resource_requirements": "Low (<150MB RAM)",
+            "architecture": "Feature-Token Transformer / TensorFlow",
+        },
+        "diabetes_type2_tf": {
+            "class": DiabetesType2LLM,
+            "description": (
+                "TF Feature-Token Transformer for T2DM: "
+                "pre-diabetes (IFG/IGT), T2DM controlled/uncontrolled/severe. "
+                "34 features: HOMA-IR, metabolic syndrome panel, lifestyle factors."
+            ),
+            "recommended_use": "T2DM risk stratification and glycaemic control grading",
+            "resource_requirements": "Low (<150MB RAM)",
+            "architecture": "Feature-Token Transformer / TensorFlow",
+        },
+        "diabetes_gestational_tf": {
+            "class": DiabetesGestationalLLM,
+            "description": (
+                "TF Feature-Token Transformer for DMG/GDM: "
+                "diet-controlled GDM, pharmacological GDM, overt T1DM/T2DM in pregnancy. "
+                "28 features: OGTT 75g (IADPSG criteria), obstetric risk factors."
+            ),
+            "recommended_use": "Diabetes screening and diagnosis in pregnant patients",
+            "resource_requirements": "Low (<150MB RAM)",
+            "architecture": "Feature-Token Transformer / TensorFlow",
+        },
     }
 
 
@@ -196,13 +270,17 @@ def get_model_registry() -> ModelRegistry:
     return _model_registry
 
 
+_TF_LLM_CLASSES = {DiabetesType1LLM, DiabetesType2LLM, DiabetesGestationalLLM}
+_PYTORCH_LLM_CLASSES = {DiabetesLLM, CardiovascularLLM, SymptomAnalysisLLM}
+
+
 def get_all_supported_symptoms() -> list:
     """Return sorted union of all symptoms supported across all model types."""
     all_symptoms: set = set()
     for model_info in get_available_models().values():
         model_class = model_info["class"]
         try:
-            if model_class in (DiabetesLLM, CardiovascularLLM, SymptomAnalysisLLM):
+            if model_class in _PYTORCH_LLM_CLASSES | _TF_LLM_CLASSES:
                 temp = model_class()
             else:
                 temp = model_class(input_size=1, hidden_size=1, num_classes=1)

@@ -74,6 +74,15 @@ class DiabetesLLM(BaseMedicalLLM):
             "hdl_cholesterol": 20,       # 0→low (bad), 1→normal/high
         }
 
+        # ── Patient context features (index 21–25) ─────────────────────────
+        self.context_mapping = {
+            "age_group": 21,          # 0=child, 0.25=teen, 0.5=young_adult, 0.75=adult, 1=elderly
+            "family_history": 22,     # 0=no first-degree relative, 1=yes
+            "hypertension": 23,       # 0=no, 1=yes (BP ≥130/80)
+            "gestational_history": 24, # 0=not applicable / no prior GDM, 1=prior GDM
+            "physical_activity": 25,  # 0=very active, 0.5=moderate, 1=sedentary
+        }
+
         # ── Diagnostic classes ──────────────────────────────────────────────
         self.condition_mapping = {
             0: "Normal Glucose Regulation",
