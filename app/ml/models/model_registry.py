@@ -1,9 +1,3 @@
-"""
-Model registry for managing all medical AI model instances and versions.
-
-Supports both the legacy MLP-based models and the new LLM-based
-specialized models (DiabetesLLM, CardiovascularLLM, SymptomAnalysisLLM).
-"""
 
 import os
 from typing import Dict, Any, Optional
@@ -94,6 +88,35 @@ class ModelRegistry:
         if checkpoint_path and os.path.exists(checkpoint_path):
             model.load_state_dict(torch.load(checkpoint_path, map_location="cpu"))
         self.register_model("symptom_analysis_llm", model)
+        return model
+
+    # ── TensorFlow Diabetes LLMs ────────────────────────────────────────────
+
+    def load_diabetes_type1_llm_tf(self, checkpoint_path: Optional[str] = None) -> Any:
+        """Return a TF DiabetesType1LLM instance, optionally restoring saved weights."""
+        from app.ml.models.diabetes_type1_llm_tf import create_diabetes_type1_llm
+        model = create_diabetes_type1_llm()
+        if checkpoint_path and os.path.exists(checkpoint_path):
+            model.load_weights(checkpoint_path)
+        self.register_model("diabetes_type1_llm_tf", model)
+        return model
+
+    def load_diabetes_type2_llm_tf(self, checkpoint_path: Optional[str] = None) -> Any:
+        """Return a TF DiabetesType2LLM instance, optionally restoring saved weights."""
+        from app.ml.models.diabetes_type2_llm_tf import create_diabetes_type2_llm
+        model = create_diabetes_type2_llm()
+        if checkpoint_path and os.path.exists(checkpoint_path):
+            model.load_weights(checkpoint_path)
+        self.register_model("diabetes_type2_llm_tf", model)
+        return model
+
+    def load_diabetes_gestational_llm_tf(self, checkpoint_path: Optional[str] = None) -> Any:
+        """Return a TF DiabetesGestationalLLM instance, optionally restoring saved weights."""
+        from app.ml.models.diabetes_gestational_llm_tf import create_diabetes_gestational_llm
+        model = create_diabetes_gestational_llm()
+        if checkpoint_path and os.path.exists(checkpoint_path):
+            model.load_weights(checkpoint_path)
+        self.register_model("diabetes_gestational_llm_tf", model)
         return model
 
     # ── Model info ──────────────────────────────────────────────────────────

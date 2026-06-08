@@ -1,15 +1,11 @@
-"""
-Base LLM architecture for specialized medical diagnostic models.
-
-Uses transformer-style attention to capture correlations between clinical
-features (symptoms, lab markers, patient context) that simple MLPs miss.
-"""
 
 from abc import abstractmethod
 from typing import Dict, Any, List, Optional
 import torch
 import torch.nn as nn
 from .base_model import BaseMedicalModel
+
+
 
 
 class ClinicalAttentionBlock(nn.Module):
@@ -126,6 +122,7 @@ class BaseMedicalLLM(nn.Module, BaseMedicalModel):
         self.symptom_mapping: Dict[str, int] = {}
         self.condition_mapping: Dict[int, str] = {}
         self.lab_marker_mapping: Dict[str, int] = {}
+        self.context_mapping: Dict[str, int] = {}
         self.recommended_exams: Dict[str, List[str]] = {}
         self.treatment_guidelines: Dict[str, List[str]] = {}
         self._initialize_clinical_knowledge()
@@ -160,12 +157,11 @@ class BaseMedicalLLM(nn.Module, BaseMedicalModel):
                     feature_vector[idx] = float(min(max(value, 0.0), 1.0))
 
         patient_context = input_data.get("patient_context", {})
-        context_offset = len(self.symptom_mapping) + len(self.lab_marker_mapping)
-        context_keys = sorted(patient_context.keys())
-        for i, key in enumerate(context_keys):
-            idx = context_offset + i
-            if idx < total_size:
-                feature_vector[idx] = float(min(max(patient_context[key], 0.0), 1.0))
+        for key, value in patient_context.items():
+            if key in self.context_mapping:
+                idx = self.context_mapping[key]
+                if idx < total_size:
+                    feature_vector[idx] = float(min(max(value, 0.0), 1.0))
 
         return torch.tensor(feature_vector, dtype=torch.float32).unsqueeze(0)
 

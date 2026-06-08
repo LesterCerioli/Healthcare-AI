@@ -1,16 +1,3 @@
-"""
-Enhanced general symptom analysis LLM.
-
-Provides a broad first-pass symptom triage across 15 disease categories
-and routes to specialized LLMs (DiabetesLLM, CardiovascularLLM) when the
-primary suspicion warrants a deeper specialist workup.
-
-Input features (40 total):
-  General symptoms [0–24]: 25 common symptoms across organ systems
-  Patient context [25–39]: 15 demographic and risk-factor features
-
-All values normalized to [0.0, 1.0].
-"""
 
 from typing import Dict, Any, List, Optional
 from .llm_base import BaseMedicalLLM
@@ -30,6 +17,10 @@ class SymptomAnalysisLLM(BaseMedicalLLM):
     SPECIALIST_REFERRAL_MAP = {
         "Diabetes Mellitus": "DiabetesLLM",
         "Cardiovascular Disease": "CardiovascularLLM",
+        # TF specialized diabetes models — selected based on patient context
+        "Diabetes Mellitus (Type 1 suspected)": "DiabetesType1LLM",
+        "Diabetes Mellitus (Type 2 suspected)": "DiabetesType2LLM",
+        "Diabetes Mellitus (Gestational)": "DiabetesGestationalLLM",
     }
 
     def __init__(self):
@@ -78,10 +69,28 @@ class SymptomAnalysisLLM(BaseMedicalLLM):
             "heat_cold_intolerance": 24,
         }
 
+        # ── General lab markers — none mandatory for triage model ───────────
+        self.lab_marker_mapping = {}
+
         # ── Patient context features (index 25–39) ───────────────────────────
-        # These are set via the patient_context field of the input dict.
-        # They are appended after symptom + lab features during preprocessing.
-        self.lab_marker_mapping = {}  # General model has no mandatory labs
+        self.context_mapping = {
+            "age_group": 25,                  # 0=child(0-12), 0.25=teen(13-18),
+                                              # 0.5=adult(19-44), 0.75=middle(45-64), 1=elderly(65+)
+            "sex_biological": 26,             # 0=female, 1=male
+            "bmi_category": 27,               # 0=normal, 0.33=overweight, 0.67=obese, 1=morbidly_obese
+            "smoker": 28,                     # 0=never, 0.5=former, 1=current
+            "alcohol_use": 29,                # 0=none, 0.5=moderate, 1=heavy
+            "family_history_chronic": 30,     # 0=no, 1=yes (DM, CVD, cancer, etc.)
+            "pregnancy_status": 31,           # 0=not pregnant, 1=pregnant (routes to GDM model)
+            "immunocompromised": 32,          # 0=no, 1=yes (HIV, transplant, chemotherapy)
+            "recent_surgery_hospitalization": 33,  # 0=no, 1=yes (within last 30 days)
+            "travel_endemic_region": 34,      # 0=no, 1=yes (malaria, dengue, TB endemic areas)
+            "on_anticoagulants": 35,          # 0=no, 1=yes (bleeding risk context)
+            "occupation_exposure_risk": 36,   # 0=low, 0.5=moderate, 1=high (chemical/bio exposure)
+            "psychosocial_stress": 37,        # 0=low, 0.5=moderate, 1=high
+            "known_chronic_disease": 38,      # 0=no, 1=yes (any pre-existing chronic condition)
+            "vaccination_up_to_date": 39,     # 0=yes/up-to-date, 1=incomplete/unknown
+        }
 
         # ── Disease categories (15 classes) ─────────────────────────────────
         self.condition_mapping = {
@@ -343,18 +352,54 @@ class SymptomAnalysisLLM(BaseMedicalLLM):
 
     def predict(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         result = super().predict(input_data)
-        if result.get("success"):
-            diagnosis = result.get("primary_diagnosis", "")
-            referral_model = self.SPECIALIST_REFERRAL_MAP.get(diagnosis)
-            if referral_model:
-                result["specialist_referral"] = {
-                    "recommended_model": referral_model,
-                    "reason": (
-                        f"Primary suspicion is {diagnosis}. "
-                        f"Pass patient data to {referral_model} for a detailed "
-                        f"disease-specific workup and treatment plan."
-                    ),
-                }
+        if not result.get("success"):
+            return result
+
+        diagnosis = result.get("primary_diagnosis", "")
+        context = input_data.get("patient_context", {})
+
+        if diagnosis == "Diabetes Mellitus":
+            # Route to the most appropriate specialized TF diabetes model
+            is_pregnant = context.get("pregnancy_status", 0.0) >= 0.5
+            autoimmune_signals = (
+                context.get("age_group", 1.0) <= 0.5          # young patient
+                and input_data.get("lab_markers", {}).get("c_peptide", 1.0) <= 0.2
+            )
+
+            if is_pregnant:
+                referral_model = "DiabetesGestationalLLM"
+                reason = (
+                    "Diabetes suspicion in a pregnant patient. "
+                    "Refer to DiabetesGestationalLLM (IADPSG/TOTG 75g criteria)."
+                )
+            elif autoimmune_signals:
+                referral_model = "DiabetesType1LLM"
+                reason = (
+                    "Young patient with low C-peptide — autoimmune (Type 1) DM suspected. "
+                    "Refer to DiabetesType1LLM for autoantibody-guided staging."
+                )
+            else:
+                referral_model = "DiabetesType2LLM"
+                reason = (
+                    "Diabetes suspicion consistent with Type 2 / metabolic profile. "
+                    "Refer to DiabetesType2LLM for insulin-resistance grading."
+                )
+
+            result["specialist_referral"] = {
+                "recommended_model": referral_model,
+                "fallback_model": "DiabetesLLM",
+                "reason": reason,
+            }
+
+        elif diagnosis == "Cardiovascular Disease":
+            result["specialist_referral"] = {
+                "recommended_model": "CardiovascularLLM",
+                "reason": (
+                    "Cardiovascular disease suspected. "
+                    "Refer to CardiovascularLLM for cardiac risk stratification and workup."
+                ),
+            }
+
         return result
 
     def get_model_info(self) -> Dict[str, Any]:
