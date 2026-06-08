@@ -72,6 +72,16 @@ class CardiovascularLLM(BaseMedicalLLM):
             "ejection_fraction": 20,        # inverted: 0→preserved (≥55%), 1→severely reduced (<30%)
         }
 
+        # ── Patient context features (index 21–26) ─────────────────────────
+        self.context_mapping = {
+            "age_group": 21,           # 0=<40, 0.25=40-54, 0.5=55-64, 0.75=65-74, 1=≥75
+            "sex_male": 22,            # 0=female, 1=male
+            "smoker": 23,              # 0=never, 0.5=former, 1=current
+            "family_history_cvd": 24,  # 0=no, 1=yes (1st-degree relative <65F / <55M)
+            "diabetes_present": 25,    # 0=no, 1=yes
+            "obesity": 26,             # 0=BMI<30, 1=BMI≥30
+        }
+
         # ── Diagnostic classes ───────────────────────────────────────────────
         self.condition_mapping = {
             0: "Normal Cardiac Profile",
