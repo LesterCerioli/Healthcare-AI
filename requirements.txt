@@ -7,7 +7,7 @@ alembic==1.12.1
 sqlmodel==0.0.14
 python-dotenv==1.2.2
 bcrypt>=4.0.1
-pyjwt==2.8.0
+pyjwt==2.12.0
 aiohttp==3.14.0
 httpx==0.25.2
 pydantic>=2.5.0
